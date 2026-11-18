@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>وصلك - إدارة السائقين والطلبات</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap');
+        body { font-family: 'Tajawal', sans-serif; background-color: #f8fafc; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 pb-24">
+
+    <!-- رأس التطبيق والشعار -->
+    <header class="bg-white shadow-sm sticky top-0 z-50 px-4 py-3 flex items-center justify-between border-b border-slate-100">
+        <div class="flex flex-col items-start">
+            <div class="flex items-center gap-1 font-black text-2xl tracking-tight" style="color: #0f3e36;">
+                <span>وصلك</span>
+                <span style="color: #ea580c; font-size: 1.1rem;">●</span>
+            </div>
+            <span class="text-[10px] text-slate-500 font-medium -mt-1">يصلك أينما كنت</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="bg-slate-100 text-slate-700 text-xs font-bold px-3 py-1.5 rounded-full">
+                الإدارة المالية
+            </span>
+        </div>
+    </header>
+
+    <main class="max-w-md mx-auto p-4 space-y-4">
+
+        <!-- 1. تبويب الطلبات (الواجهة الرئيسية) -->
+        <div id="tab-orders" class="space-y-4">
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                <h2 class="font-bold text-slate-800 mb-3 flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-box-open text-[#ea580c]"></i> تسجيل عملية توصيل جديدة
+                </h2>
+                <form id="order-form" onsubmit="addOrder(event)" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">اختر السائق المنفذ</label>
+                        <select id="order-driver-select" required class="w-full p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600">
+                            <option value="">-- اختر السائق --</option>
+                        </select>
+                        <p class="text-[10px] text-slate-400 mt-1">* يظهر فقط السائقون الذين يملكون رصيداً كافياً (أعلى من العمولة).</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">المسار (من - إلى) / اسم العميل</label>
+                        <input type="text" id="client-info" required placeholder="مثال: السوق المركزي -> حي الترحيل" class="w-full p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">قيمة التوصيل (الحد الأدنى 50 أوقية)</label>
+                        <input type="number" id="order-fee" required min="50" placeholder="50" class="w-full p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600">
+                    </div>
+                    <button type="submit" class="w-full bg-[#0f3e36] text-white py-3 rounded-xl font-bold text-sm shadow-md hover:bg-emerald-900 transition">
+                        تأكيد الطلب وخصم العمولة (10%)
+                    </button>
+                </form>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                <h3 class="font-bold text-slate-700 mb-3 text-sm">أحدث التوصيلات المنفذة</h3>
+                <div id="recent-orders-list" class="space-y-2.5"></div>
+            </div>
+        </div>
+
+        <!-- 2. تبويب السائقين (ملف مستقل لكل سائق) -->
+        <div id="tab-drivers" class="space-y-4 hidden">
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                <h2 class="font-bold text-slate-800 mb-3 flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-user-plus text-emerald-700"></i> تسجيل سائق جديد (رصيد ابتدائي: 0)
+                </h2>
+                <form id="driver-form" onsubmit="registerDriver(event)" class="space-y-3">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">اسم السائق</label>
+                            <input type="text" id="driver-name" required placeholder="الاسم الكامل" class="w-full p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">رقم الهاتف</label>
+                            <input type="tel" id="driver-phone" required placeholder="22XXXXXX" class="w-full p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">رقم لوحة الدراجة النارية</label>
+                        <input type="text" id="driver-plate" required placeholder="مثال: 4512 AA 00" class="w-full p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl">
+                    </div>
+                    <button type="submit" class="w-full bg-slate-800 text-white py-2.5 rounded-xl font-bold text-xs hover:bg-slate-900 transition">
+                        إضافة السائق للنظام
+                    </button>
+                </form>
+            </div>
+
+            <div class="space-y-3">
+                <h3 class="font-bold text-slate-700 text-sm px-1">ملفات السائقين المسجلين</h3>
+                <div id="drivers-cards-list" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- 3. تبويب الدخل اليومي والتاريخ -->
+        <div id="tab-earnings" class="space-y-4 hidden">
+            <div class="bg-gradient-to-br from-[#0f3e36] to-emerald-900 text-white p-5 rounded-2xl shadow-md">
+                <h3 class="text-xs text-emerald-200 font-medium mb-1">إجمالي حركة التوصيل الكلية</h3>
+                <div class="text-3xl font-black mb-3" id="total-gross">0 أوقية</div>
+                <div class="flex justify-between text-xs border-t border-emerald-800/60 pt-3">
+                    <span>أرباح الشركة الصافية (10%): <strong id="total-company-profit" class="text-amber-300">0</strong> أوقية</span>
+                    <span>دخل السائقين: <strong id="total-drivers-net">0</strong> أوقية</span>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                <h3 class="font-bold text-slate-700 mb-3 text-sm flex items-center justify-between">
+                    <span>سجل الدخل اليومي بالتاريخ</span>
+                    <i class="fa-solid fa-calendar-check text-emerald-600"></i>
+                </h3>
+                <div id="daily-earnings-list" class="space-y-2.5"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- نافذة تفاصيل السائق وسجله المستقل -->
+    <div id="driver-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden shadow-xl">
+            <div class="p-4 bg-[#0f3e36] text-white flex justify-between items-center">
+                <div>
+                    <h3 id="modal-driver-name" class="font-bold text-base">اسم السائق</h3>
+                    <p id="modal-driver-meta" class="text-xs text-emerald-200">اللوحة والهاتف</p>
+                </div>
+                <button onclick="closeDriverModal()" class="text-white/80 hover:text-white text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                <div>
+                    <span class="text-xs text-slate-500 block">الرصيد المتاح حالياً</span>
+                    <span id="modal-driver-balance" class="font-black text-lg text-emerald-700">0 أوقية</span>
+                </div>
+                <button onclick="promptTopUp()" class="bg-[#ea580c] text-white px-3 py-2 rounded-xl text-xs font-bold shadow-sm">
+                    <i class="fa-solid fa-plus"></i> شحن رصيد (أدنى 50)
+                </button>
+            </div>
+
+            <div class="p-4 overflow-y-auto flex-1">
+                <h4 class="font-bold text-xs text-slate-600 mb-2">سجل جميع عمليات التوصيل لهذا السائق:</h4>
+                <div id="modal-driver-orders" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- شريط التنقل السفلي -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 py-2.5 px-4 flex justify-around items-center z-40 max-w-md mx-auto">
+        <button onclick="switchTab('orders')" id="nav-orders" class="flex flex-col items-center text-[#0f3e36] font-bold text-xs">
+            <i class="fa-solid fa-motorcycle text-lg mb-0.5"></i>
+            الطلبات
+        </button>
+        <button onclick="switchTab('drivers')" id="nav-drivers" class="flex flex-col items-center text-slate-400 font-semibold text-xs">
+            <i class="fa-solid fa-users text-lg mb-0.5"></i>
+            السائقون
+        </button>
+        <button onclick="switchTab('earnings')" id="nav-earnings" class="flex flex-col items-center text-slate-400 font-semibold text-xs">
+            <i class="fa-solid fa-chart-pie text-lg mb-0.5"></i>
+            الدخل اليومي
+        </button>
+    </nav>
+
+    <script>
+        let drivers = JSON.parse(localStorage.getItem('waslek_v3_drivers')) || [];
+        let orders = JSON.parse(localStorage.getItem('waslek_v3_orders')) || [];
+        let activeModalDriverId = null;
+
+        function saveData() {
+            localStorage.setItem('waslek_v3_drivers', JSON.stringify(drivers));
+            localStorage.setItem('waslek_v3_orders', JSON.stringify(orders));
+        }
+
+        function registerDriver(e) {
+            e.preventDefault();
+            const name = document.getElementById('driver-name').value.trim();
+            const phone = document.getElementById('driver-phone').value.trim();
+            const plate = document.getElementById('driver-plate').value.trim();
+
+            const newDriver = {
+                id: 'DRV-' + Date.now(),
+                name: name,
+                phone: phone,
+                plate: plate,
+                balance: 0,
+                joinedDate: new Date().toISOString().split('T')[0]
+            };
+
+            drivers.push(newDriver);
+            saveData();
+            document.getElementById('driver-form').reset();
+            renderAll();
+            alert(`تم تسجيل السائق (${name}) بنجاح برصيد 0 أوقية. الحد الأدنى للشحن المقبول هو 50 أوقية جديدة.`);
+        }
+
+        function topUpDriver(driverId) {
+            const amountStr = prompt("أدخل مبلغ الشحن بالأوقية الجديدة (الحد الأدنى 50 أوقية):");
+            if (!amountStr) return;
+            const amount = parseFloat(amountStr);
+            if (isNaN(amount) || amount < 50) {
+                alert("عذراً، الحد الأدنى للشحن هو 50 أوقية جديدة.");
+                return;
+            }
+
+            const driver = drivers.find(d => d.id === driverId);
+            if (driver) {
+                driver.balance = Number((driver.balance + amount).toFixed(2));
+                saveData();
+                renderAll();
+                if (activeModalDriverId === driverId) {
+                    openDriverModal(driverId);
+                }
+            }
+        }
+
+        function promptTopUp() {
+            if (activeModalDriverId) {
+                topUpDriver(activeModalDriverId);
+            }
+        }
+
+        function addOrder(e) {
+            e.preventDefault();
+            const driverId = document.getElementById('order-driver-select').value;
+            const clientInfo = document.getElementById('client-info').value.trim();
+            const fee = parseFloat(document.getElementById('order-fee').value);
+
+            if (fee < 50) {
+                alert("عذراً، الحد الأدنى لقيمة التوصيل هو 50 أوقية جديدة.");
+                return;
+            }
+
+            const driver = drivers.find(d => d.id === driverId);
+            if (!driver) {
+                alert("يرجى اختيار سائق صالح.");
+                return;
+            }
+
+            const commission = Number((fee * 0.10).toFixed(2));
+
+            if (driver.balance < commission) {
+                alert(`عذراً، رصيد السائق (${driver.balance} أوقية) غير كافٍ لخصم عمولة الطلب (${commission} أوقية). يرجى شحن رصيده أولاً.`);
+                return;
+            }
+
+            driver.balance = Number((driver.balance - commission).toFixed(2));
+
+            const now = new Date();
+            const dateOnly = now.toISOString().split('T')[0];
+            const timeOnly = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            const newOrder = {
+                id: 'ORD-' + Date.now(),
+                driverId: driver.id,
+                driverName: driver.name,
+                driverPlate: driver.plate,
+                clientInfo: clientInfo,
+                fee: fee,
+                commission: commission,
+                netDriver: Number((fee - commission).toFixed(2)),
+                date: dateOnly,
+                time: timeOnly
+            };
+
+            orders.push(newOrder);
+            saveData();
+            document.getElementById('order-form').reset();
+            renderAll();
+            alert(`تم تسجيل الطلب بنجاح!\nقيمة التوصيل: ${fee} أوقية\nالعمولة المخصومة (10%): ${commission} أوقية\nرصيد السائق المتبقي: ${driver.balance} أوقية`);
+        }
+
+        function openDriverModal(driverId) {
+            const driver = drivers.find(d => d.id === driverId);
+            if (!driver) return;
+
+            activeModalDriverId = driverId;
+            document.getElementById('modal-driver-name').innerText = driver.name;
+            document.getElementById('modal-driver-meta').innerText = `هاتف: ${driver.phone} | لوحة: ${driver.plate}`;
+            document.getElementById('modal-driver-balance').innerText = `${driver.balance} أوقية`;
+
+            const driverOrders = orders.filter(o => o.driverId === driverId).reverse();
+            const ordersContainer = document.getElementById('modal-driver-orders');
+
+            if (driverOrders.length === 0) {
+                ordersContainer.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">لم يقم هذا السائق بأي عملية توصيل حتى الآن.</p>`;
+            } else {
+                ordersContainer.innerHTML = driverOrders.map(o => `
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
+                        <div class="flex justify-between font-bold text-slate-800">
+                            <span>${o.clientInfo}</span>
+                            <span class="text-emerald-700">${o.fee} أوقية</span>
+                        </div>
+                        <div class="flex justify-between text-[11px] text-slate-500">
+                            <span>التاريخ: ${o.date} (${o.time})</span>
+                            <span class="text-red-600">الخصم (10%): -${o.commission} أوقية</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            document.getElementById('driver-modal').classList.remove('hidden');
+        }
+
+        function closeDriverModal() {
+            activeModalDriverId = null;
+            document.getElementById('driver-modal').classList.add('hidden');
+        }
+
+        function renderAll() {
+            const selectEl = document.getElementById('order-driver-select');
+            const activeDrivers = drivers.filter(d => d.balance > 0);
+            selectEl.innerHTML = `<option value="">-- اختر السائق (${activeDrivers.length} متاح) --</option>` + 
+                activeDrivers.map(d => `<option value="${d.id}">${d.name} (${d.plate}) - الرصيد: ${d.balance} أوقية</option>`).join('');
+
+            const recentEl = document.getElementById('recent-orders-list');
+            if (orders.length === 0) {
+                recentEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">لا توجد طلبات مسجلة.</p>`;
+            } else {
+                recentEl.innerHTML = orders.slice(-5).reverse().map(o => `
+                    <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center text-xs">
+                        <div>
+                            <span class="font-bold text-slate-800 block">${o.clientInfo}</span>
+                            <span class="text-[10px] text-slate-500">السائق: ${o.driverName} | ${o.date}</span>
+                        </div>
+                        <div class="text-left">
+                            <span class="font-bold text-emerald-700 block">${o.fee} أوقية</span>
+                            <span class="text-[10px] text-red-500">خصم: ${o.commission}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            const driversListEl = document.getElementById('drivers-cards-list');
+            if (drivers.length === 0) {
+                driversListEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-6 bg-white rounded-2xl">لا يوجد سائقون مسجلون حالياً.</p>`;
+            } else {
+                driversListEl.innerHTML = drivers.map(d => {
+                    const dOrdersCount = orders.filter(o => o.driverId === d.id).length;
+                    const statusBadge = d.balance >= 50 
+                        ? `<span class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-bold">نشط</span>`
+                        : `<span class="bg-red-100 text-red-700 text-[10px] px-2 py-0.5 rounded-full font-bold">رصيد منخفض / موقوف</span>`;
+
+                    return `
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 space-y-3">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h4 class="font-bold text-slate-800 text-sm">${d.name}</h4>
+                                        ${statusBadge}
+                                    </div>
+                                    <p class="text-xs text-slate-500 mt-0.5"><i class="fa-solid fa-phone text-[10px]"></i> ${d.phone} | <i class="fa-solid fa-id-card text-[10px]"></i> ${d.plate}</p>
+                                </div>
+                                <div class="text-left">
+                                    <span class="text-[10px] text-slate-400 block">الرصيد</span>
+                                    <span class="font-black text-sm ${d.balance > 0 ? 'text-emerald-700' : 'text-red-600'}">${d.balance} أوقية</span>
+                                </div>
+                            </div>
+                            <div class="pt-2 border-t border-slate-100 flex justify-between items-center gap-2">
+                                <button onclick="openDriverModal('${d.id}')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-xl text-xs font-bold transition">
+                                    <i class="fa-solid fa-list-ul ml-1"></i> سجل العمليات (${dOrdersCount})
+                                </button>
+                                <button onclick="topUpDriver('${d.id}')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-2 rounded-xl text-xs font-bold transition">
+                                    <i class="fa-solid fa-plus"></i> شحن
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            const totalGross = orders.reduce((sum, o) => sum + o.fee, 0);
+            const totalProfit = orders.reduce((sum, o) => sum + o.commission, 0);
+            const totalDriversNet = totalGross - totalProfit;
+
+            document.getElementById('total-gross').innerText = `${totalGross.toLocaleString()} أوقية`;
+            document.getElementById('total-company-profit').innerText = totalProfit.toLocaleString();
+            document.getElementById('total-drivers-net').innerText = totalDriversNet.toLocaleString();
+
+            const dailyMap = {};
+            orders.forEach(o => {
+                if (!dailyMap[o.date]) {
+                    dailyMap[o.date] = { count: 0, gross: 0, profit: 0 };
+                }
+                dailyMap[o.date].count += 1;
+                dailyMap[o.date].gross += o.fee;
+                dailyMap[o.date].profit += o.commission;
+            });
+
+            const sortedDates = Object.keys(dailyMap).sort().reverse();
+            const dailyListEl = document.getElementById('daily-earnings-list');
+
+            if (sortedDates.length === 0) {
+                dailyListEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">لا توجد بيانات دخل يومية.</p>`;
+            } else {
+                dailyListEl.innerHTML = sortedDates.map(date => `
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center">
+                        <div>
+                            <span class="font-bold text-slate-800 text-xs block"><i class="fa-regular fa-calendar text-emerald-600 ml-1"></i> ${date}</span>
+                            <span class="text-[10px] text-slate-500">عدد التوصيلات: ${dailyMap[date].count}</span>
+                        </div>
+                        <div class="text-left">
+                            <span class="font-black text-emerald-700 text-sm block">${dailyMap[date].gross.toLocaleString()} أوقية</span>
+                            <span class="text-[10px] text-amber-700 font-semibold">أرباح الشركة (10%): ${dailyMap[date].profit.toLocaleString()}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function switchTab(tab) {
+            ['orders', 'drivers', 'earnings'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                document.getElementById(`nav-${t}`).className = "flex flex-col items-center text-slate-400 font-semibold text-xs";
+            });
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            document.getElementById(`nav-${tab}`).className = "flex flex-col items-center text-[#0f3e36] font-bold text-xs";
+        }
+
+        renderAll();
+    </script>
+</body>
+</html>
